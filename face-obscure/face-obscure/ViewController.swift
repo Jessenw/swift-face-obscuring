@@ -18,21 +18,20 @@ class ViewController: UIViewController {
         
         // Load image
         guard
-            let sourceImage = UIImage(named: "base_image")?.resized(toWidth: view.frame.width),
-            let sourceCGImage = sourceImage.cgImage
+            let sourceImage = UIImage(named: "base_image")?
+                .resized(toWidth: view.frame.width),
+            let cgSourceImage = sourceImage.cgImage
             else { return }
         
-        let sourceCIImage = CIImage(cgImage: sourceCGImage)
-        let sourceImageView = UIImageView(image: sourceImage)
-        sourceImageView.contentMode = .scaleAspectFit
+        let ciSourceImage = CIImage(cgImage: cgSourceImage)
         
         guard let pixelateFilter = CIFilter(name: "CIPixellate")
             else { return }
-        pixelateFilter.setValue(sourceCIImage, forKey: kCIInputImageKey)
-        pixelateFilter.setValue(max(sourceCIImage.extent.width, sourceCIImage.extent.height) / 60, forKey: kCIInputScaleKey)
+        pixelateFilter.setValue(ciSourceImage, forKey: kCIInputImageKey)
+        pixelateFilter.setValue(max(ciSourceImage.extent.width, ciSourceImage.extent.height) / 60, forKey: kCIInputScaleKey)
         
         // Create face detection request
-        let request = VNDetectFaceRectanglesRequest { [weak self, sourceCIImage] (req, err) in
+        let request = VNDetectFaceRectanglesRequest { [weak self, ciSourceImage] (req, err) in
             guard let sself = self
                 else { return }
             
@@ -62,11 +61,12 @@ class ViewController: UIViewController {
                     size: CGSize(width: width, height: height))
                 
                 let radialMask = sself.generateRadialMask(bounds: CGRect(
-                    origin: CGPoint(x: x * 2, y: (sourceImage.size.height * faceObservation.boundingBox.origin.y) * 2),
+                    origin: CGPoint(x: x * 2, y: (sourceImage.size.height * faceObservation.boundingBox.origin.y) * 2), // Not sure why scaling is required here
                     size: CGSize(width: width, height: height)))
                 
                 let radialMaskImage = radialMask?.outputImage
                 
+                // If no imageMask is set - set this as the initial imageMask, otherwise - create a composite of this radialMaskImage and the maskImage
                 if maskImage == nil {
                     maskImage = radialMaskImage
                 } else {
@@ -81,22 +81,23 @@ class ViewController: UIViewController {
                 boxViews.append(boxView)
             })
             
+            // Blend the filtered image with the source image using the mask
             guard let composite = CIFilter(name: "CIBlendWithMask")
                 else { return }
             composite.setValue(pixelateFilter.outputImage, forKey: kCIInputImageKey)
-            composite.setValue(sourceCIImage, forKey: kCIInputBackgroundImageKey)
+            composite.setValue(ciSourceImage, forKey: kCIInputBackgroundImageKey)
             composite.setValue(maskImage, forKey: kCIInputMaskImageKey)
             
-            if let processedImageView = sself.createImageView(from: composite.outputImage, extent: sourceCIImage.extent, context: sself.context) {
+            if let processedImageView = sself.createImageView(from: composite.outputImage, extent: ciSourceImage.extent, context: sself.context) {
                 sself.view.addSubview(processedImageView)
             }
             
-            // Display raw mask image
+//            // Display raw mask image
 //            if let maskImageView = sself.createImageView(from: maskImage, extent: sourceCIImage.extent, context: sself.context) {
 //                sself.view.addSubview(maskImageView)
 //            }
             
-            // Show boxes for detected faces
+//            // Show boxes for detected faces
 //            boxViews.forEach({ view in
 //                sself.view.addSubview(view)
 //            })
@@ -104,7 +105,7 @@ class ViewController: UIViewController {
         
         // Perform request
         let handler = VNImageRequestHandler(
-            cgImage: sourceCGImage,
+            cgImage: cgSourceImage,
             options: [:])
         do {
             try handler.perform([request])

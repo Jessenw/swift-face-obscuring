@@ -1,6 +1,6 @@
 //
 //  ViewController.swift
-//  face-detect-spike-2
+//  face-obscure
 //
 //  Created by Jesse Williams on 3/06/20.
 //  Copyright © 2020 Jesse Williams. All rights reserved.
@@ -17,28 +17,22 @@ class ViewController: UIViewController {
         super.viewDidLoad()
         
         // Load image
-        guard let sourceImage = UIImage(named: "base_image")?.resized(toWidth: view.frame.width)
+        guard
+            let sourceImage = UIImage(named: "base_image")?.resized(toWidth: view.frame.width),
+            let sourceCGImage = sourceImage.cgImage
             else { return }
-        guard let sourceCGImage = sourceImage.cgImage
-            else { return }
-        let sourceCIImage = CIImage(cgImage: sourceCGImage)
         
+        let sourceCIImage = CIImage(cgImage: sourceCGImage)
         let sourceImageView = UIImageView(image: sourceImage)
         sourceImageView.contentMode = .scaleAspectFit
-        
-        // Create blur filter
-//        guard let blurFilter = CIFilter(name: "CIGaussianBlur")
-//            else { return }
-//        blurFilter.setValue(sourceCIImage, forKey: kCIInputImageKey)
-//        blurFilter.setValue(2, forKey: kCIInputRadiusKey)
         
         guard let pixelateFilter = CIFilter(name: "CIPixellate")
             else { return }
         pixelateFilter.setValue(sourceCIImage, forKey: kCIInputImageKey)
-        pixelateFilter.setValue(max(sourceCIImage.extent.width, sourceCIImage.extent.height) / 60.0, forKey: kCIInputScaleKey)
+        pixelateFilter.setValue(max(sourceCIImage.extent.width, sourceCIImage.extent.height) / 60, forKey: kCIInputScaleKey)
         
         // Create face detection request
-        let request = VNDetectFaceRectanglesRequest { [weak self] (req, err) in
+        let request = VNDetectFaceRectanglesRequest { [weak self, sourceCIImage] (req, err) in
             guard let sself = self
                 else { return }
             
@@ -68,7 +62,7 @@ class ViewController: UIViewController {
                     size: CGSize(width: width, height: height))
                 
                 let radialMask = sself.generateRadialMask(bounds: CGRect(
-                    origin: CGPoint(x: x, y: y),
+                    origin: CGPoint(x: x * 2, y: (sourceImage.size.height * faceObservation.boundingBox.origin.y) * 2),
                     size: CGSize(width: width, height: height)))
                 
                 let radialMaskImage = radialMask?.outputImage
@@ -93,41 +87,41 @@ class ViewController: UIViewController {
             composite.setValue(sourceCIImage, forKey: kCIInputBackgroundImageKey)
             composite.setValue(maskImage, forKey: kCIInputMaskImageKey)
             
-            guard let outputCIImage = composite.outputImage
-                else { return }
-            guard let outputCGImage = sself.context.createCGImage(outputCIImage, from: outputCIImage.extent)
-                else { return }
-            let outputImage = UIImage(cgImage: outputCGImage)
-            let outputImageView = UIImageView(image: outputImage)
+            if let processedImageView = sself.createImageView(from: composite.outputImage, extent: sourceCIImage.extent, context: sself.context) {
+                sself.view.addSubview(processedImageView)
+            }
             
-            sself.view.addSubview(outputImageView)
-            
-            // Display mask image
-            guard let ciMaskImage = maskImage
-                else { return }
-            guard let cgMaskImage = sself.context.createCGImage(ciMaskImage, from: outputCIImage.extent)
-                else { return }
-            let outputMaskImage = UIImage(cgImage: cgMaskImage)
-            let outputMaskImageView = UIImageView(image: outputMaskImage)
-            
-            sself.view.addSubview(outputMaskImageView)
+            // Display raw mask image
+//            if let maskImageView = sself.createImageView(from: maskImage, extent: sourceCIImage.extent, context: sself.context) {
+//                sself.view.addSubview(maskImageView)
+//            }
             
             // Show boxes for detected faces
-            boxViews.forEach({ view in
-                sself.view.addSubview(view)
-            })
+//            boxViews.forEach({ view in
+//                sself.view.addSubview(view)
+//            })
         }
         
         // Perform request
         let handler = VNImageRequestHandler(
             cgImage: sourceCGImage,
             options: [:])
-        
         do {
             try handler.perform([request])
         } catch let err {
             print("Failed to perform request:", err)
         }
+    }
+    
+    // Takes a CIImage and converts it into a UIImageView
+    func createImageView(from image: CIImage?, extent: CGRect, context: CIContext) -> UIImageView? {
+        guard
+            let ciImage = image,
+            let cgImage = context.createCGImage(ciImage, from: extent)
+            else { return nil }
+
+        let outputImage = UIImage(cgImage: cgImage)
+        return UIImageView(image: outputImage)
     }
     
     func generateRadialMask(bounds: CGRect) -> CIFilter? {

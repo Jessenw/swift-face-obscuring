@@ -28,7 +28,7 @@ class ViewController: UIViewController {
         guard let pixelateFilter = CIFilter(name: "CIPixellate")
             else { return }
         pixelateFilter.setValue(ciSourceImage, forKey: kCIInputImageKey)
-        pixelateFilter.setValue(max(ciSourceImage.extent.width, ciSourceImage.extent.height) / 60, forKey: kCIInputScaleKey)
+        pixelateFilter.setValue(max(ciSourceImage.extent.width, ciSourceImage.extent.height) / 100, forKey: kCIInputScaleKey)
         
         // Create face detection request
         let request = VNDetectFaceRectanglesRequest { [weak self, ciSourceImage] (req, err) in
@@ -54,8 +54,8 @@ class ViewController: UIViewController {
                 let width = sself.view.frame.width * faceObservation.boundingBox.width
                 
                 let boxView = UIView()
-                boxView.backgroundColor = .red
-                boxView.alpha = 0.2
+                boxView.layer.borderWidth = 2
+                boxView.layer.borderColor = UIColor.red.cgColor
                 boxView.frame = CGRect(
                     origin: CGPoint(x: x, y: y),
                     size: CGSize(width: width, height: height))
@@ -97,10 +97,10 @@ class ViewController: UIViewController {
 //                sself.view.addSubview(maskImageView)
 //            }
             
-//            // Show boxes for detected faces
-//            boxViews.forEach({ view in
-//                sself.view.addSubview(view)
-//            })
+            // Show boxes for detected faces
+            boxViews.forEach({ view in
+                sself.view.addSubview(view)
+            })
         }
         
         // Perform request
@@ -132,7 +132,7 @@ class ViewController: UIViewController {
             else { return nil }
         
         mask.setValue(radius, forKey: "inputRadius0")
-        mask.setValue(radius + 1, forKey: "inputRadius1")
+        mask.setValue(radius + 5, forKey: "inputRadius1")
         mask.setValue(CIColor(red: 0, green: 1, blue: 0, alpha: 1), forKey: "inputColor0") // Inner colour
         mask.setValue(CIColor(red: 0, green: 0, blue: 0, alpha: 0), forKey: "inputColor1") // Outer colour
         mask.setValue(CIVector(x: (bounds.origin.x + bounds.size.width) / 2,

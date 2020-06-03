@@ -37,16 +37,6 @@ class ViewController: UIViewController {
         pixelateFilter.setValue(sourceCIImage, forKey: kCIInputImageKey)
         pixelateFilter.setValue(max(sourceCIImage.extent.width, sourceCIImage.extent.height) / 60.0, forKey: kCIInputScaleKey)
         
-        // Test image filtering - Adding of other subviews will need to be commented out
-//        guard let ciFilteredImage = pixelateFilter.outputImage
-//            else { return }
-//        guard let cgFilteredImage = context.createCGImage(ciFilteredImage, from: ciBlurImage.extent)
-//            else { return }
-//        let filteredImage = UIImage(cgImage: cgFilteredImage)
-//        let blurFilteredView = UIImageView(image: FilteredImage)
-//
-//        view.addSubview(blurImageView)
-        
         // Create face detection request
         let request = VNDetectFaceRectanglesRequest { [weak self] (req, err) in
             guard let sself = self

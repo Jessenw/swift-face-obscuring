@@ -1,6 +1,6 @@
 # Swift Face Obscuring
 
-This is a super rough implementation of an app which detects faces in an image and applies a filter to hide them.
+This is a super rough implementation of an app which detects faces in an image and applies a filter to hide them. You can tap a face with a bounding box and it will either filter or unfilter the image.
 
 ## How it works
 
@@ -9,7 +9,7 @@ Most of this is abstracted away through Apple's Vision SDK. Basically, you can c
 
 The request can then be performed by a `VNImageRequestHandler`.
 
-## Filtering and masking
+### Filtering and masking
 The actual image processing is handled by `CIImage` which allows `CIFilter`'s to applied to it. Because we only want a filter to be applied to parts of an image (i.e. faces), a mask image must first be created. This mask image says where the filter should be applied on the source image. Once a mask image has been created a `CIBlendWithMask` can be used to blend the filtered image, mask image and source image.
 
 ## Future plans

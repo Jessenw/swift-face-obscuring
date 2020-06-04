@@ -25,10 +25,15 @@ class ViewController: UIViewController {
         
         let ciSourceImage = CIImage(cgImage: cgSourceImage)
         
-        guard let pixelateFilter = CIFilter(name: "CIPixellate")
+        guard let filter = CIFilter(name: "CIGaussianBlur")
             else { return }
-        pixelateFilter.setValue(ciSourceImage, forKey: kCIInputImageKey)
-        pixelateFilter.setValue(max(ciSourceImage.extent.width, ciSourceImage.extent.height) / 100, forKey: kCIInputScaleKey)
+        filter.setValue(ciSourceImage, forKey: kCIInputImageKey)
+        filter.setValue(2, forKey: kCIInputRadiusKey)
+        
+//        guard let pixelateFilter = CIFilter(name: "CIPixellate")
+//            else { return }
+//        pixelateFilter.setValue(ciSourceImage, forKey: kCIInputImageKey)
+//        pixelateFilter.setValue(max(ciSourceImage.extent.width, ciSourceImage.extent.height) / 100, forKey: kCIInputScaleKey)
         
         // Create face detection request
         let request = VNDetectFaceRectanglesRequest { [weak self, ciSourceImage] (req, err) in
@@ -40,7 +45,7 @@ class ViewController: UIViewController {
                 return
             }
             
-            var boxViews = [UIView]()
+            var boxViewBounds = [CGRect]()
             var maskImage: CIImage?
             
             req.results?.forEach({ (res) in
@@ -50,15 +55,13 @@ class ViewController: UIViewController {
                 // A face observations bounding box is a percentage of the screen
                 let x = sself.view.frame.width * faceObservation.boundingBox.origin.x
                 let height = sourceImage.size.height * faceObservation.boundingBox.height
-                let y = sourceImage.size.height * (1 - faceObservation.boundingBox.origin.y) - height
+                // let y = sourceImage.size.height * (1 - faceObservation.boundingBox.origin.y) - height
+                let y = sourceImage.size.height * faceObservation.boundingBox.origin.y
                 let width = sself.view.frame.width * faceObservation.boundingBox.width
                 
-                let boxView = UIView()
-                boxView.layer.borderWidth = 2
-                boxView.layer.borderColor = UIColor.red.cgColor
-                boxView.frame = CGRect(
+                boxViewBounds.append(CGRect(
                     origin: CGPoint(x: x, y: y),
-                    size: CGSize(width: width, height: height))
+                    size: CGSize(width: width, height: height)))
                 
                 let radialMask = sself.generateRadialMask(bounds: CGRect(
                     origin: CGPoint(x: x * 2, y: (sourceImage.size.height * faceObservation.boundingBox.origin.y) * 2), // Not sure why scaling is required here
@@ -77,8 +80,6 @@ class ViewController: UIViewController {
                     
                     maskImage = compositeFilter.outputImage
                 }
-                
-                boxViews.append(boxView)
             })
             
             // Blend the filtered image with the source image using the mask
@@ -88,19 +89,37 @@ class ViewController: UIViewController {
             composite.setValue(ciSourceImage, forKey: kCIInputBackgroundImageKey)
             composite.setValue(maskImage, forKey: kCIInputMaskImageKey)
             
-            if let processedImageView = sself.createImageView(from: composite.outputImage, extent: ciSourceImage.extent, context: sself.context) {
-                sself.view.addSubview(processedImageView)
-            }
+            guard let processedImageView = sself.createImageView(from: composite.outputImage, extent: ciSourceImage.extent, context: sself.context)
+                else { return }
             
-//            // Display raw mask image
-//            if let maskImageView = sself.createImageView(from: maskImage, extent: sourceCIImage.extent, context: sself.context) {
-//                sself.view.addSubview(maskImageView)
-//            }
+            guard let sourceImageView = sself.createImageView(from: ciSourceImage, extent: ciSourceImage.extent, context: sself.context)
+                else { return }
             
-            // Show boxes for detected faces
-            boxViews.forEach({ view in
-                sself.view.addSubview(view)
+            // sself.view.addSubview(processedImageView)
+            sself.view.addSubview(sourceImageView)
+            
+            boxViewBounds.forEach({ frame in
+                guard let compositeImage = composite.outputImage
+                    else { return }
+                
+                let croppedImage = compositeImage.cropped(to: frame)
+                guard let croppedImageView = sself.createImageView(from: croppedImage, extent: croppedImage.extent, context: sself.context)
+                    else { return }
+                
+                let button = FaceBoundingBoxButton(croppedImageView: croppedImageView)
+                button.frame = CGRect(
+                    origin: CGPoint(
+                        x: frame.origin.x,
+                        y: (processedImageView.frame.size.height - frame.origin.y) - frame.size.height),
+                    size: frame.size)
+                
+                sself.view.addSubview(button)
             })
+            
+            //            // Display raw mask image
+            //            if let maskImageView = sself.createImageView(from: maskImage, extent: sourceCIImage.extent, context: sself.context) {
+            //                sself.view.addSubview(maskImageView)
+            //            }
         }
         
         // Perform request
@@ -140,6 +159,51 @@ class ViewController: UIViewController {
                       forKey: kCIInputCenterKey)
         
         return mask
+    }
+    
+    func createCIImage(from image: UIImage) -> CIImage? {
+        guard
+            let sourceImage = image
+                .resized(toWidth: view.frame.width),
+            let cgSourceImage = sourceImage.cgImage
+            else { return nil }
+        
+        return CIImage(cgImage: cgSourceImage)
+    }
+}
+
+class FaceBoundingBoxButton: UIButton {
+    
+    let croppedImageView: UIImageView
+    
+    required init(croppedImageView: UIImageView) {
+        self.croppedImageView = croppedImageView
+                
+        super.init(frame: .zero)
+        
+        self.croppedImageView.isHidden = true
+        layer.borderWidth = 2
+        layer.borderColor = UIColor.red.cgColor
+        
+        addTarget(self, action: #selector(tapped), for: .touchUpInside)
+        addSubview(croppedImageView)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    override func layoutSubviews() {
+        croppedImageView.frame = CGRect(
+            origin: .zero,
+            size: CGSize(
+                width: frame.width,
+                height: frame.height))
+    }
+    
+    @objc func tapped() {
+        print("tapped")
+        croppedImageView.isHidden = !croppedImageView.isHidden
     }
 }
 

@@ -11,29 +11,29 @@ import Vision
 
 class ViewController: UIViewController {
     
-    let context = { CIContext() }()
+    private let blurRadius = 4
+    
+    private let context = { CIContext() }()
 
     override func viewDidLoad() {
         super.viewDidLoad()
         
         // Load image
         guard
-            let sourceImage = UIImage(named: "base_image")?
-                .resized(toWidth: view.frame.width),
+            let sourceImage = UIImage(named: "base_image")?.resized(toWidth: view.frame.width),
             let cgSourceImage = sourceImage.cgImage
             else { return }
         
         let ciSourceImage = CIImage(cgImage: cgSourceImage)
         
+        // Display source image
+        view.addSubview(UIImageView(image: sourceImage))
+        
+        // Create filter
         guard let filter = CIFilter(name: "CIGaussianBlur")
             else { return }
         filter.setValue(ciSourceImage, forKey: kCIInputImageKey)
-        filter.setValue(2, forKey: kCIInputRadiusKey)
-        
-//        guard let pixelateFilter = CIFilter(name: "CIPixellate")
-//            else { return }
-//        pixelateFilter.setValue(ciSourceImage, forKey: kCIInputImageKey)
-//        pixelateFilter.setValue(max(ciSourceImage.extent.width, ciSourceImage.extent.height) / 100, forKey: kCIInputScaleKey)
+        filter.setValue(blurRadius, forKey: kCIInputRadiusKey)
         
         // Create face detection request
         let request = VNDetectFaceRectanglesRequest { [weak self, ciSourceImage] (req, err) in
@@ -51,13 +51,15 @@ class ViewController: UIViewController {
             req.results?.forEach({ (res) in
                 guard let faceObservation = res as? VNFaceObservation
                     else { return }
-                
-                // A face observations bounding box is a percentage of the screen
+
+                /*
+                 A face observations bounding box coordinates are normalized to dimensions of the processed image.
+                 E.g. an origin's X value could be 0.13 where 0 is the min X and 1 is the max X.
+                 */
                 let x = sself.view.frame.width * faceObservation.boundingBox.origin.x
-                let height = sourceImage.size.height * faceObservation.boundingBox.height
-                // let y = sourceImage.size.height * (1 - faceObservation.boundingBox.origin.y) - height
                 let y = sourceImage.size.height * faceObservation.boundingBox.origin.y
                 let width = sself.view.frame.width * faceObservation.boundingBox.width
+                let height = sourceImage.size.height * faceObservation.boundingBox.height
                 
                 boxViewBounds.append(CGRect(
                     origin: CGPoint(x: x, y: y),
@@ -85,19 +87,14 @@ class ViewController: UIViewController {
             // Blend the filtered image with the source image using the mask
             guard let composite = CIFilter(name: "CIBlendWithMask")
                 else { return }
-            composite.setValue(pixelateFilter.outputImage, forKey: kCIInputImageKey)
+            composite.setValue(filter.outputImage, forKey: kCIInputImageKey)
             composite.setValue(ciSourceImage, forKey: kCIInputBackgroundImageKey)
             composite.setValue(maskImage, forKey: kCIInputMaskImageKey)
             
             guard let processedImageView = sself.createImageView(from: composite.outputImage, extent: ciSourceImage.extent, context: sself.context)
                 else { return }
             
-            guard let sourceImageView = sself.createImageView(from: ciSourceImage, extent: ciSourceImage.extent, context: sself.context)
-                else { return }
-            
-            // sself.view.addSubview(processedImageView)
-            sself.view.addSubview(sourceImageView)
-            
+            // Create face bounding box views which contain the filtered image according to their frame
             boxViewBounds.forEach({ frame in
                 guard let compositeImage = composite.outputImage
                     else { return }
@@ -115,11 +112,6 @@ class ViewController: UIViewController {
                 
                 sself.view.addSubview(button)
             })
-            
-            //            // Display raw mask image
-            //            if let maskImageView = sself.createImageView(from: maskImage, extent: sourceCIImage.extent, context: sself.context) {
-            //                sself.view.addSubview(maskImageView)
-            //            }
         }
         
         // Perform request
@@ -163,47 +155,11 @@ class ViewController: UIViewController {
     
     func createCIImage(from image: UIImage) -> CIImage? {
         guard
-            let sourceImage = image
-                .resized(toWidth: view.frame.width),
+            let sourceImage = image.resized(toWidth: view.frame.width),
             let cgSourceImage = sourceImage.cgImage
             else { return nil }
         
         return CIImage(cgImage: cgSourceImage)
-    }
-}
-
-class FaceBoundingBoxButton: UIButton {
-    
-    let croppedImageView: UIImageView
-    
-    required init(croppedImageView: UIImageView) {
-        self.croppedImageView = croppedImageView
-                
-        super.init(frame: .zero)
-        
-        self.croppedImageView.isHidden = true
-        layer.borderWidth = 2
-        layer.borderColor = UIColor.red.cgColor
-        
-        addTarget(self, action: #selector(tapped), for: .touchUpInside)
-        addSubview(croppedImageView)
-    }
-    
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-    override func layoutSubviews() {
-        croppedImageView.frame = CGRect(
-            origin: .zero,
-            size: CGSize(
-                width: frame.width,
-                height: frame.height))
-    }
-    
-    @objc func tapped() {
-        print("tapped")
-        croppedImageView.isHidden = !croppedImageView.isHidden
     }
 }
 

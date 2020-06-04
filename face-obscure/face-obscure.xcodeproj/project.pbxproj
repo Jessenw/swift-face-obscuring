@@ -13,6 +13,7 @@
 		8842C13324884AB400835632 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 8842C13124884AB400835632 /* Main.storyboard */; };
 		8842C13524884AB700835632 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8842C13424884AB700835632 /* Assets.xcassets */; };
 		8842C13824884AB700835632 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 8842C13624884AB700835632 /* LaunchScreen.storyboard */; };
+		8842C1402488BCE500835632 /* FaceBoundingBoxButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8842C13F2488BCE500835632 /* FaceBoundingBoxButton.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -24,6 +25,7 @@
 		8842C13424884AB700835632 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		8842C13724884AB700835632 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		8842C13924884AB700835632 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		8842C13F2488BCE500835632 /* FaceBoundingBoxButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaceBoundingBoxButton.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -63,6 +65,7 @@
 				8842C13424884AB700835632 /* Assets.xcassets */,
 				8842C13624884AB700835632 /* LaunchScreen.storyboard */,
 				8842C13924884AB700835632 /* Info.plist */,
+				8842C13F2488BCE500835632 /* FaceBoundingBoxButton.swift */,
 			);
 			path = "face-obscure";
 			sourceTree = "<group>";
@@ -138,6 +141,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8842C1402488BCE500835632 /* FaceBoundingBoxButton.swift in Sources */,
 				8842C13024884AB400835632 /* ViewController.swift in Sources */,
 				8842C12C24884AB400835632 /* AppDelegate.swift in Sources */,
 				8842C12E24884AB400835632 /* SceneDelegate.swift in Sources */,
